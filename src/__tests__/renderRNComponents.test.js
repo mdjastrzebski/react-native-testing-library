@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable react/no-multi-comp */
 import React from 'react';
 import {
   Image,
@@ -9,9 +10,11 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  FlatList,
+  Button,
 } from 'react-native';
 
-import { render } from '..';
+import { render, fireEvent } from '..';
 
 class RNComponents extends React.Component<*> {
   render() {
@@ -33,6 +36,46 @@ class RNComponents extends React.Component<*> {
     );
   }
 }
+
+class AppWithFlatList extends React.Component {
+  state = {
+    projects: [
+      { name: 'Super Important Project A', id: '01' },
+      { name: 'Super Important Project B', id: '02' },
+      { name: 'Super Important Project C', id: '03' },
+    ],
+  };
+
+  render() {
+    const Project = ({ name }) => <Text>{name}</Text>;
+    return (
+      <View>
+        <Text testID="header">
+          After this text, we should have the FlatList with the Projects
+        </Text>
+        <Button
+          title="remove last"
+          onPress={() =>
+            this.setState(state => ({ projects: state.projects.slice(0, 2) }))
+          }
+        />
+        <FlatList
+          data={this.state.projects}
+          renderItem={({ item }) => <Project name={item.name} />}
+          keyExtractor={({ id }) => id}
+          ListEmptyComponent={<Text>There are no projects</Text>}
+        />
+      </View>
+    );
+  }
+}
+
+test('FlatList', () => {
+  const { debug, getByText } = render(<AppWithFlatList />);
+  debug(); // renders 3 elements
+  fireEvent.press(getByText('remove last'));
+  debug(); // renders 2 elements
+});
 
 test('getByName smoke test to see how unstable it gets', () => {
   const { getByName } = render(<RNComponents />);
