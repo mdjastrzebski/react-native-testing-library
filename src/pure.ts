@@ -1,5 +1,6 @@
 export { act } from './act';
 export { cleanup } from './cleanup';
+export { dispatchNativeEvent as unstable_dispatchNativeEvent } from './events/dispatch-native-event';
 export { fireEvent } from './events/fire-event';
 export { render } from './render';
 export { waitFor } from './wait-for';
