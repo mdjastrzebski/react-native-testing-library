@@ -1,25 +1,15 @@
 import type { TestInstance } from 'test-renderer';
 
-import { act } from '../act';
-import { getConfig } from '../config';
 import { isInstanceMounted } from '../helpers/component-tree';
 import { dispatchNativeEvent } from './dispatch-native-event';
-import { getEventTypeConfig } from './event-types';
-import { getEventHandlerFromProps } from './handler';
-import type { NativeEventPayload } from './synthetic-event';
-
-/**
- * Events that `userEvent` sends to component callbacks passed to host elements by Jest mocks
- * (e.g. `onPress` on mocked `Text`), rather than native events. They are always called directly,
- * even when React Native has a native event with the same name.
- */
-const componentCallbackEvents = new Set(['press']);
+import { getNativeEventPayload } from './event-subsystem';
+import { dispatchLegacyEvent } from './legacy/dispatch';
 
 /**
  * Basic dispatch event function used by User Event module.
  *
- * With `unstable_nativeEventDispatch` enabled, native events are dispatched through
- * `dispatchNativeEvent()` (capture and bubble phases). Other events only call the target handler.
+ * Native events go through `dispatchNativeEvent()` (capture and bubble phases) when
+ * `unstable_nativeEventDispatch` is enabled. Otherwise only the target's own handler is called.
  *
  * @param instance instance to trigger event on
  * @param eventName name of the event
@@ -34,35 +24,11 @@ export async function dispatchEvent(
     return;
   }
 
-  if (getConfig().unstable_nativeEventDispatch) {
-    const nativeEvent = getNativeEventPayload(event[0]);
-    if (
-      nativeEvent != null &&
-      !componentCallbackEvents.has(eventName) &&
-      getEventTypeConfig(eventName) != null
-    ) {
-      await dispatchNativeEvent(instance, eventName, nativeEvent);
-      return;
-    }
-  }
-
-  const handler = getEventHandlerFromProps(instance.props, eventName);
-  if (!handler) {
+  const nativeEvent = getNativeEventPayload(eventName, event[0]);
+  if (nativeEvent != null) {
+    await dispatchNativeEvent(instance, eventName, nativeEvent);
     return;
   }
 
-  await act(() => {
-    handler(...event);
-  });
-}
-
-function getNativeEventPayload(event: unknown): NativeEventPayload | null {
-  if (event == null || typeof event !== 'object' || !('nativeEvent' in event)) {
-    return null;
-  }
-
-  const nativeEvent = event.nativeEvent;
-  return nativeEvent != null && typeof nativeEvent === 'object'
-    ? (nativeEvent as NativeEventPayload)
-    : null;
+  await dispatchLegacyEvent(instance, eventName, ...event);
 }

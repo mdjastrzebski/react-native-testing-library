@@ -1,13 +1,14 @@
 import type { Fiber, TestInstance } from 'test-renderer';
 
-import { formatElement } from '../helpers/format-element';
-import { logger } from '../helpers/logger';
-import { getEventHandlerFromProps, normalizeEventName } from './handler';
+import { formatElement } from '../../helpers/format-element';
+import { logger } from '../../helpers/logger';
+import { getEventHandlerFromProps, normalizeEventName } from '../handler';
+import type { EventHandler } from '../types';
 import { isEventEnabled, isTouchResponder } from './is-enabled';
-import type { EventHandler } from './types';
 
 /**
  * Direct events are delivered by React Native only to the emitting element and do not bubble.
+ * Note: legacy propagation only treats `layout` as direct, see `contributing/native-events.md`.
  */
 export function isDirectEvent(eventName: string) {
   return eventName === 'layout';

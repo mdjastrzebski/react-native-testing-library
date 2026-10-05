@@ -29,46 +29,38 @@ export const isPointerEventEnabled = (instance: TestInstance, isParent?: boolean
   return isPointerEventEnabled(instance.parent, true);
 };
 
-export function isTouchResponder(instance: TestInstance) {
-  return Boolean(instance.props.onStartShouldSetResponder) || isHostTextInput(instance);
-}
-
-/**
- * List of events affected by `pointerEvents` prop.
- */
-const eventsAffectedByPointerEventsProp = new Set(['press']);
-
 /**
  * List of `TextInput` events not affected by `editable` prop.
  */
-const textInputEventsIgnoringEditableProp = new Set(['contentSizeChange', 'layout', 'scroll']);
+export const textInputEventsIgnoringEditableProp = new Set([
+  'contentSizeChange',
+  'layout',
+  'scroll',
+]);
 
 /**
- * Checks whether a device would deliver the event to the instance, taking into account
- * `pointerEvents`, non-editable `TextInput` and touch responders that decline the touch.
- * Expects event name without the `on*` prefix (see `normalizeEventName`).
+ * Checks whether a device would emit a native event from the target element: a non-editable
+ * `TextInput` (or its nested `Text`) emits no editing events. Touch delivery is decided by
+ * the responder system, so `pointerEvents` and touch responders are not checked here.
+ * Expects event name without the `on*` prefix.
  */
-export function isEventEnabled(
-  instance: TestInstance,
-  eventName: string,
-  nearestTouchResponder?: TestInstance,
-) {
-  if (nearestTouchResponder != null && isHostTextInput(nearestTouchResponder)) {
-    return (
-      isEditableTextInput(nearestTouchResponder) ||
-      textInputEventsIgnoringEditableProp.has(eventName)
-    );
+export function isNativeEventEnabled(instance: TestInstance, eventName: string) {
+  const textInput = findHostTextInput(instance);
+  if (textInput != null) {
+    return isEditableTextInput(textInput) || textInputEventsIgnoringEditableProp.has(eventName);
   }
 
-  if (eventsAffectedByPointerEventsProp.has(eventName) && !isPointerEventEnabled(instance)) {
-    return false;
+  return true;
+}
+
+function findHostTextInput(instance: TestInstance): TestInstance | null {
+  let current: TestInstance | null = instance;
+  while (current != null) {
+    if (isHostTextInput(current)) {
+      return current;
+    }
+    current = current.parent;
   }
 
-  const touchStart = nearestTouchResponder?.props.onStartShouldSetResponder?.();
-  const touchMove = nearestTouchResponder?.props.onMoveShouldSetResponder?.();
-  if (touchStart || touchMove) {
-    return true;
-  }
-
-  return touchStart === undefined && touchMove === undefined;
+  return null;
 }
