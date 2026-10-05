@@ -1,11 +1,14 @@
 import type { TestInstance } from 'test-renderer';
 
 import { act } from '../../act';
+import { getConfig } from '../../config';
 import {
   buildResponderGrantEvent,
   buildResponderReleaseEvent,
   buildTouchEvent,
+  buildTouchNativeEvent,
   dispatchEvent,
+  dispatchNativeEvent,
   getEventHandlerFromProps,
   isPointerEventEnabled,
 } from '../../events';
@@ -58,13 +61,21 @@ const basePress = async (
   config: UserEventConfig,
   instance: TestInstance,
   options: BasePressOptions,
+  target: TestInstance = instance,
 ): Promise<void> => {
   if (isEnabledHostElement(instance) && hasPressEventHandler(instance)) {
     await emitDirectPressEvents(config, instance, options);
     return;
   }
 
-  if (isEnabledTouchResponder(instance)) {
+  if (getConfig().unstable_nativeEventDispatch) {
+    // The responder system picks the element that handles the touch, so touch events
+    // are sent to the pressed element, not to the touch responder found here.
+    if (isTouchResponderCandidate(instance) || !instance.parent) {
+      await emitTouchPressEvents(config, target, options);
+      return;
+    }
+  } else if (isEnabledTouchResponder(instance)) {
     await emitPressabilityPressEvents(config, instance, options);
     return;
   }
@@ -73,7 +84,7 @@ const basePress = async (
     return;
   }
 
-  await basePress(config, instance.parent, options);
+  await basePress(config, instance.parent, options, target);
 };
 
 function isEnabledHostElement(instance: TestInstance) {
@@ -94,6 +105,13 @@ function isEnabledHostElement(instance: TestInstance) {
 
 function isEnabledTouchResponder(instance: TestInstance) {
   return isPointerEventEnabled(instance) && instance.props.onStartShouldSetResponder?.();
+}
+
+function isTouchResponderCandidate(instance: TestInstance) {
+  return (
+    instance.props.onStartShouldSetResponder != null ||
+    instance.props.onStartShouldSetResponderCapture != null
+  );
 }
 
 function hasPressEventHandler(instance: TestInstance) {
@@ -151,6 +169,34 @@ async function emitPressabilityPressEvents(
   // React Native will wait for minimal delay of DEFAULT_MIN_PRESS_DURATION
   // before emitting the `pressOut` event. We need to wait here, so that
   // `press()` function does not return before that.
+  if (DEFAULT_MIN_PRESS_DURATION - duration > 0) {
+    await act(() => wait(config, DEFAULT_MIN_PRESS_DURATION - duration));
+  }
+}
+
+/**
+ * Dispatches touch events, like a device does. Pressability receives `onResponderGrant` and
+ * `onResponderRelease` from the responder system (`dispatchNativeEvent`).
+ */
+async function emitTouchPressEvents(
+  config: UserEventConfig,
+  target: TestInstance,
+  options: BasePressOptions,
+) {
+  // Device does not deliver touches to elements with disabled pointer events.
+  if (!isPointerEventEnabled(target)) {
+    return;
+  }
+
+  await wait(config);
+  await dispatchNativeEvent(target, 'touchStart', buildTouchNativeEvent('touchStart'));
+
+  const duration = options.duration ?? DEFAULT_MIN_PRESS_DURATION;
+  await wait(config, duration);
+
+  await dispatchNativeEvent(target, 'touchEnd', buildTouchNativeEvent('touchEnd'));
+
+  // See `emitPressabilityPressEvents`.
   if (DEFAULT_MIN_PRESS_DURATION - duration > 0) {
     await act(() => wait(config, DEFAULT_MIN_PRESS_DURATION - duration));
   }

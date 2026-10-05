@@ -22,7 +22,18 @@ test('configure() overrides existing config values', () => {
     asyncUtilTimeout: 5000,
     defaultDebugOptions: { message: 'debug message' },
     defaultIncludeHiddenElements: false,
+    unstable_nativeEventDispatch: false,
   });
+});
+
+test('configure() sets unstable_nativeEventDispatch', () => {
+  expect(getConfig().unstable_nativeEventDispatch).toBe(false);
+
+  configure({ unstable_nativeEventDispatch: true });
+  expect(getConfig().unstable_nativeEventDispatch).toBe(true);
+
+  configure({ asyncUtilTimeout: 2000 });
+  expect(getConfig().unstable_nativeEventDispatch).toBe(true);
 });
 
 test('resetToDefaults() resets config to defaults', () => {

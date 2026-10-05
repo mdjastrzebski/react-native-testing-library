@@ -26,6 +26,28 @@ export function buildTouchEvent() {
 
 export type TouchEvent = ReturnType<typeof buildTouchEvent>;
 
+/**
+ * Builds native payload for `touchStart`, `touchMove` and `touchEnd` events: the changed touch,
+ * plus `changedTouches` and `touches` (touches still on the screen) lists.
+ */
+export function buildTouchNativeEvent(type: 'touchStart' | 'touchMove' | 'touchEnd') {
+  const touch = {
+    identifier: 0,
+    locationX: 0,
+    locationY: 0,
+    pageX: 0,
+    pageY: 0,
+    target: 0,
+    timestamp: Date.now(),
+  };
+
+  return {
+    ...touch,
+    changedTouches: [touch],
+    touches: type === 'touchEnd' ? [] : [touch],
+  };
+}
+
 export function buildResponderGrantEvent() {
   return {
     ...buildTouchEvent(),

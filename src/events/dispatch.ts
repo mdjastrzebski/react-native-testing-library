@@ -1,11 +1,15 @@
 import type { TestInstance } from 'test-renderer';
 
-import { act } from '../act';
 import { isInstanceMounted } from '../helpers/component-tree';
-import { getEventHandlerFromProps } from './handler';
+import { dispatchNativeEvent } from './dispatch-native-event';
+import { getNativeEventPayload } from './event-subsystem';
+import { dispatchLegacyEvent } from './legacy/dispatch';
 
 /**
  * Basic dispatch event function used by User Event module.
+ *
+ * Native events go through `dispatchNativeEvent()` (capture and bubble phases) when
+ * `unstable_nativeEventDispatch` is enabled. Otherwise only the target's own handler is called.
  *
  * @param instance instance to trigger event on
  * @param eventName name of the event
@@ -20,12 +24,11 @@ export async function dispatchEvent(
     return;
   }
 
-  const handler = getEventHandlerFromProps(instance.props, eventName);
-  if (!handler) {
+  const nativeEvent = getNativeEventPayload(eventName, event[0]);
+  if (nativeEvent != null) {
+    await dispatchNativeEvent(instance, eventName, nativeEvent);
     return;
   }
 
-  await act(() => {
-    handler(...event);
-  });
+  await dispatchLegacyEvent(instance, eventName, ...event);
 }

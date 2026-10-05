@@ -2,7 +2,9 @@
 
 In React Native, some events **bubble** up to parent elements and others are **direct**, meaning only the element that emitted them receives them. `fireEvent` should behave the same way.
 
-Today, `fireEvent` treats every event as bubbling except `layout`. The list of direct events lives in `isDirectEvent()` in `src/events/propagation.ts`.
+With the legacy event subsystem, `fireEvent` treats every event as bubbling except `layout`. The list of direct events lives in `isDirectEvent()` in `src/events/legacy/propagation.ts`.
+
+The experimental native subsystem (`unstable_nativeEventDispatch`, see [Event dispatch](event-dispatch.md)) reads bubbling and direct events from `src/events/event-types.ts`, a copy of React Native's view configs that `event-types.test.ts` checks against the installed `react-native`.
 
 ## Which events are which
 
@@ -26,7 +28,7 @@ This is simplified. A few events differ between iOS and Android. Check the sourc
 
 ## Known gaps
 
-All the direct events above except `layout` still bubble in `fireEvent`. Fixing that is a breaking change: tests that fire these events on a child element would stop reaching the parent's handler.
+With the legacy subsystem, all the direct events above except `layout` still bubble in `fireEvent`. Fixing that is a breaking change: tests that fire these events on a child element would stop reaching the parent's handler.
 
 ## Sources
 

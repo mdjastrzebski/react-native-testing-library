@@ -14,6 +14,12 @@ export type Config = {
 
   /** Default options for `debug` helper. */
   defaultDebugOptions?: Partial<DebugOptions>;
+
+  /**
+   * Experimental: `userEvent` dispatches events the way React Native does, with capture and
+   * bubble phases over host elements and a responder system driven by touch events.
+   */
+  unstable_nativeEventDispatch: boolean;
 };
 
 export type ConfigAliasOptions = {
@@ -24,6 +30,7 @@ export type ConfigAliasOptions = {
 const defaultConfig: Config = {
   asyncUtilTimeout: 1000,
   defaultIncludeHiddenElements: false,
+  unstable_nativeEventDispatch: false,
 };
 
 let config = { ...defaultConfig };
@@ -37,6 +44,7 @@ export function configure(options: Partial<Config & ConfigAliasOptions>) {
     defaultDebugOptions,
     defaultHidden,
     defaultIncludeHiddenElements,
+    unstable_nativeEventDispatch,
     ...rest
   } = options;
 
@@ -50,6 +58,8 @@ export function configure(options: Partial<Config & ConfigAliasOptions>) {
     asyncUtilTimeout: asyncUtilTimeout ?? config.asyncUtilTimeout,
     defaultDebugOptions,
     defaultIncludeHiddenElements: resolvedDefaultIncludeHiddenElements,
+    unstable_nativeEventDispatch:
+      unstable_nativeEventDispatch ?? config.unstable_nativeEventDispatch,
   };
 }
 
